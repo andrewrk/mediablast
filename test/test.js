@@ -18,6 +18,79 @@ var env = {
   S3_BUCKET: process.env.S3_BUCKET,
 };
 
+describe("bootup", function() {
+  before(function(done) {
+    var exe = spawn("./node_modules/.bin/naught", ["stop"]);
+    exe.on('exit', function() { done(); });
+  });
+  after(function(done) {
+    var batch = new Batch();
+    batch.push(function(done) { fs.unlink("naught.log", done); });
+    batch.push(function(done) { fs.unlink("stderr.log", done); });
+    batch.push(function(done) { fs.unlink("stdout.log", done); });
+    batch.end(done);
+  });
+  it("boots", function(done) {
+    var exe = spawn("./node_modules/.bin/naught", ["start", "lib/server.js"], {
+      stdio: 'pipe'
+    });
+    var stderr = "";
+    exe.stderr.setEncoding('utf8');
+    exe.stderr.on('data', function(data) {
+      stderr += data;
+    });
+    exe.on('close', function(code) {
+      if (code === 0) {
+        done();
+      } else {
+        console.error("naught stderr:", stderr);
+        done(new Error("could not boot server"));
+      }
+    });
+  });
+  it("responds to status endpoint", function(done) {
+    http.get(url.parse("http://localhost:13116/status"), function(resp) {
+      assert.strictEqual(resp.statusCode, 200);
+      done();
+    });
+  });
+  it("deploys code", function(done) {
+    var exe = spawn("./node_modules/.bin/naught", ["deploy"], {
+      stdio: 'pipe'
+    });
+    var stderr = "";
+    exe.stderr.setEncoding('utf8');
+    exe.stderr.on('data', function(data) {
+      stderr += data;
+    });
+    exe.on('exit', function(code) {
+      if (code === 0) {
+        done();
+      } else {
+        console.error("naught stderr:", stderr);
+        done(new Error("could not deploy server"));
+      }
+    });
+  });
+  it("shuts down", function(done) {
+    var exe = spawn("./node_modules/.bin/naught", ["stop"], {
+      stdio: 'pipe'
+    });
+    var stderr = "";
+    exe.stderr.setEncoding('utf8');
+    exe.stderr.on('data', function(data) {
+      stderr += data;
+    });
+    exe.on('exit', function(code) {
+      if (code === 0) {
+        done();
+      } else {
+        console.error("naught stderr:", stderr);
+        done(new Error("could not shut down server"));
+      }
+    });
+  });
+});
 describe("app", function() {
   function createServer(settingsObject, cb) {
     settingsObject = settingsObject || {};
@@ -125,7 +198,7 @@ describe("app", function() {
         "secret": env.S3_SECRET,
         "bucket": env.S3_BUCKET,
       });
-      var uploader = client.upload(path.join(__dirname, "48000.wav"), "/mediablast-test/48000.wav")
+      var uploader = client.upload(path.join(__dirname, "48000.wav"), "/media-man-test/48000.wav")
       uploader.on('error', done);
       uploader.on('end', cb);
     });
@@ -137,7 +210,7 @@ describe("app", function() {
       var url = "http://localhost:" + server.address().port + "/";
       var req = superagent.post(url);
       req.field('callbackUrl', "http://localhost:" + cbServer.address().port + "/");
-      req.field('s3Url', "/mediablast-test/48000.wav");
+      req.field('s3Url', "/media-man-test/48000.wav");
       req.field('templateId', "16b924a9-89d0-41ce-b452-93478b5e60fc");
       req.buffer();
       req.end(function(err, resp) {
