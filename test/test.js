@@ -1,0 +1,414 @@
+var mediaMan = require('../lib/app')
+  , Settings = require('../lib/settings')
+  , spawn = require('child_process').spawn
+  , path = require('path')
+  , Batch = require('batch')
+  , fs = require('fs')
+  , http = require('http')
+  , url = require('url')
+  , assert = require('assert')
+  , querystring = require('querystring')
+  , superagent = require('superagent')
+  , EventSource = require('eventsource')
+  , s3 = require('s3')
+
+var env = {
+  S3_KEY: process.env.S3_KEY,
+  S3_SECRET: process.env.S3_SECRET,
+  S3_BUCKET: process.env.S3_BUCKET,
+};
+
+describe("app", function() {
+  function createServer(settingsObject, cb) {
+    settingsObject = settingsObject || {};
+    var defaultSettings = {
+      "version": 12,
+      "completed_job_lifespan": 1800,
+      "templates": {},
+      "auth": {
+        "username": "admin",
+        "password": "3pTkHwHV"
+      }
+    };
+    var settings = new Settings(path.join(__dirname, "tmp.json"));
+    settings.json = extend(defaultSettings, settingsObject);
+    var app = mediaMan.create(settings);
+    var server = http.createServer(app);
+    server.listen(cb);
+    server.app = app;
+    return server;
+  }
+  it("executes a complicated audio template", function(done) {
+    var batch = new Batch();
+    var server;
+    batch.push(function(cb) {
+      server = createServer({
+        "templates": {
+          "16b924a9-89d0-41ce-b452-93478b5e60fc": {
+            "tasks": {
+              "fetch": {
+                "task": "s3.download",
+                "options": {
+                  "s3Key": env.S3_KEY,
+                  "s3Secret": env.S3_SECRET,
+                  "s3Bucket": env.S3_BUCKET,
+                },
+              },
+              "waveform": {
+                "task": "audio.waveform",
+                "options": {
+                  "width": 1800,
+                  "height": 200,
+                  "colorCenter": "0081daff",
+                  "colorOuter": "004678ff",
+                  "colorBg": "00000000",
+                },
+                "dependencies": ["fetch"],
+              },
+              "waveform_upload": {
+                "task": "s3.upload",
+                "options": {
+                  "url": "/{uuid}/waveform{ext}",
+                  "s3Key": env.S3_KEY,
+                  "s3Secret": env.S3_SECRET,
+                  "s3Bucket": env.S3_BUCKET,
+                },
+                "dependencies": ["waveform"],
+              },
+              "preview": {
+                "task": "audio.transcode",
+                "options": {
+                  "bitRate": 192,
+                  "sampleRate": 44100,
+                  "format": "mp3",
+                },
+                "dependencies": ["fetch"],
+              },
+              "preview_upload": {
+                "task": "s3.upload",
+                "options": {
+                  "url": "/{uuid}/preview{ext}",
+                  "s3Key": env.S3_KEY,
+                  "s3Secret": env.S3_SECRET,
+                  "s3Bucket": env.S3_BUCKET,
+                },
+                "dependencies": ["preview"],
+              },
+              "callback": {
+                "task": "meta.callback",
+                "options": {
+                  "ignoreDependencyErrors": true,
+                },
+                "dependencies": [
+                  "waveform_upload",
+                  "preview_upload",
+                ],
+              },
+            },
+          },
+        },
+      }, cb);
+    });
+    var cbCount = 0;
+    var cbServer;
+    batch.push(function(cb) {
+      cbServer = http.createServer(function(req, resp) {
+        cbCount += 1;
+        resp.statusCode = 200;
+        resp.end();
+      });
+      cbServer.listen(cb);
+    });
+    batch.push(function(cb) {
+      var client = s3.createClient({
+        "key": env.S3_KEY,
+        "secret": env.S3_SECRET,
+        "bucket": env.S3_BUCKET,
+      });
+      var uploader = client.upload(path.join(__dirname, "48000.wav"), "/mediablast-test/48000.wav")
+      uploader.on('error', done);
+      uploader.on('end', cb);
+    });
+    batch.end(function(err) {
+      if (err) return done(err);
+      perform();
+    });
+    function perform() {
+      var url = "http://localhost:" + server.address().port + "/";
+      var req = superagent.post(url);
+      req.field('callbackUrl', "http://localhost:" + cbServer.address().port + "/");
+      req.field('s3Url', "/mediablast-test/48000.wav");
+      req.field('templateId', "16b924a9-89d0-41ce-b452-93478b5e60fc");
+      req.buffer();
+      req.end(function(err, resp) {
+        if (err) return done(err);
+        assert.equal(resp.body.error, null);
+        assert.strictEqual(resp.body.state, 'processing');
+        var progress = resp.body.progress;
+        assert.strictEqual(progress, 0);
+
+        var esUrl = "http://localhost:" + server.address().port + "/status/" + resp.body.id;
+        var source = new EventSource(esUrl);
+        source.addEventListener('message', onMessage, false);
+        source.addEventListener('error', onError, false);
+        function onError(event) {
+          if (source.readyState !== EventSource.CLOSED) {
+            done(new Error("event source error: " + event));
+          }
+        }
+        function onMessage(e) {
+          var job = JSON.parse(e.data);
+          // make sure the progress doesn't go down too much
+          assert(job.progress - progress > -0.5,
+            "old progress: " + progress + ", new progress: " + job.progress);
+          progress = job.progress;
+          if (job.state === 'complete') {
+            source.close();
+            assert.strictEqual(progress, 1);
+            assert.strictEqual(job.state, 'complete');
+            assert.ok(! job.error, "job status is error");
+            assert.strictEqual(cbCount, 1);
+            done();
+          }
+        }
+      });
+    }
+  });
+  it("executes a complicated image template", function(done) {
+    var server = createServer({
+      "templates": {
+        "16b924a9-89d0-41ce-b452-93478b5e60fc": {
+          "options": {
+            "s3.upload": {
+              "s3Key": env.S3_KEY,
+              "s3Secret": env.S3_SECRET,
+              "s3Bucket": env.S3_BUCKET,
+            }
+          },
+          "tasks": {
+            "original": {
+              "task": "s3.upload",
+              "options": {
+                "url": "/{uuid}/original{ext}",
+              },
+            },
+            "tiny": {
+              "task": "image.thumbnail",
+              "options": {
+                "format": "png",
+                "width": 30,
+                "height": 30,
+                "strip": true,
+                "crop": false,
+              },
+            },
+            "tiny_upload": {
+              "task": "s3.upload",
+              "options": {
+                "url": "/{uuid}/tiny{ext}",
+              },
+              "dependencies": [
+                'tiny'
+              ],
+            },
+            "small": {
+              "task": "image.thumbnail",
+              "options": {
+                "format": "png",
+                "width": 40,
+                "height": 40,
+                "strip": true,
+                "crop": false,
+              },
+            },
+            "small_upload": {
+              "task": "s3.upload",
+              "options": {
+                "url": "/{uuid}/tiny{ext}",
+              },
+              "dependencies": [
+                'tiny'
+              ],
+            },
+          }
+        }
+      }
+    }, function() {
+      var url = "http://localhost:" + server.address().port + "/";
+      var req = superagent.post(url);
+      req.attach('file', path.join(__dirname, 'calvin-chess.png'));
+      req.field('templateId', "16b924a9-89d0-41ce-b452-93478b5e60fc");
+      req.buffer();
+      req.end(function(err, resp) {
+        if (err) return done(err);
+        assert.equal(resp.body.error, null);
+        assert.strictEqual(resp.body.state, 'processing');
+        var progress = resp.body.progress;
+        assert.strictEqual(progress, 0);
+
+        var esUrl = "http://localhost:" + server.address().port + "/status/" + resp.body.id;
+        var source = new EventSource(esUrl);
+        source.addEventListener('message', onMessage, false);
+        source.addEventListener('error', onError, false);
+        function onError(event) {
+          if (source.readyState !== EventSource.CLOSED) {
+            done(new Error("event source error: " + event));
+          }
+        }
+        function onMessage(e) {
+          var job = JSON.parse(e.data);
+          // make sure the progress doesn't go down too much
+          assert(job.progress - progress > -0.5,
+            "old progress: " + progress + ", new progress: " + job.progress);
+          progress = job.progress;
+          if (job.state === 'complete') {
+            source.close();
+            assert.strictEqual(progress, 1);
+            assert.strictEqual(job.state, 'complete');
+            assert.ok(! job.error, "job status is error");
+            done();
+          }
+        }
+      });
+    });
+  });
+  it("removes jobs from memory after a period of time", function(done) {
+    var server = createServer({
+      "completed_job_lifespan": 0.1,
+      "templates": {
+        "16b924a9-89d0-41ce-b452-93478b5e60fc": {
+          "tasks": {
+            "callback": {
+              "task": "meta.callback",
+            },
+          },
+        },
+      },
+    }, function() {
+      var cbCount = 0;
+      var cbServer = http.createServer(function(req, resp) {
+        cbCount += 1;
+        resp.statusCode = 200;
+        resp.end();
+      });
+      cbServer.listen(function() {
+        var url = "http://localhost:" + server.address().port + "/";
+        var req = superagent.post(url);
+        req.field('callbackUrl', 'http://localhost:' + cbServer.address().port + '/');
+        req.field('templateId', "16b924a9-89d0-41ce-b452-93478b5e60fc");
+        req.buffer();
+        req.end(function(err, resp) {
+          if (err) return done(err);
+          assert.equal(resp.body.error, null);
+          // this is just a field I added in the createServer
+          // function to make testing easier
+          var app = server.app;
+          app.on('queueChange', function(jobsTable) {
+            var count = 0;
+            for (var job in jobsTable) {
+              count += 1;
+            }
+            if (count === 0) {
+              assert.strictEqual(cbCount, 1);
+              cbServer.close();
+              done();
+            }
+          });
+        });
+      });
+    });
+  });
+  describe("admin", function() {
+    it("fails getting settings with bad password", function(done) {
+      var server = createServer(null, function() {
+        var opts = {
+          host: 'localhost',
+          port: server.address().port,
+          method: 'GET',
+          path: '/admin/settings',
+        };
+        var req = http.request(opts, function (resp) {
+          resp.setEncoding('utf8');
+          var body = ""
+          resp.on('data', function (chunk) {
+            body += chunk;
+          });
+          resp.on('end', function() {
+            assert.ok(/Unauthorized/.test(body));
+          });
+          done()
+        });
+        req.on('error', done);
+        req.end()
+      });
+    });
+    it("displays the get settings page", function(done) {
+      var server = createServer(null, function() {
+        var opts = {
+          host: 'localhost',
+          port: server.address().port,
+          method: 'GET',
+          path: '/admin/settings',
+          auth: 'admin:eQCDUs3j',
+        };
+        var req = http.request(opts, function (resp) {
+          resp.setEncoding('utf8');
+          var body = ""
+          resp.on('data', function (chunk) {
+            body += chunk;
+          });
+          resp.on('end', function() {
+            assert.ok(/submit/.test(body));
+            assert.ok(/textarea/.test(body));
+            assert.ok(/&quot;username&quot;:/.test(body));
+          });
+          done()
+        });
+        req.on('error', done);
+        req.end()
+      });
+    });
+    it("accepts an update to settings", function(done) {
+      var server = createServer(null, function() {
+        fs.readFile("settings.json", 'utf8', function(err, settingsJson) {
+          if (err) return done(err);
+          var settingsObj = JSON.parse(settingsJson);
+          var opts = {
+            host: 'localhost',
+            port: server.address().port,
+            method: 'POST',
+            path: '/admin/settings',
+            auth: "admin:eQCDUs3j",
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+            }
+          };
+          var req = http.request(opts, function(resp) {
+            resp.setEncoding('utf8');
+            var body = ""
+            resp.on('data', function (chunk) {
+              body += chunk;
+            });
+            resp.on('end', function() {
+              assert.ok(/Saved/.test(body));
+              fs.unlink(path.join(__dirname, "tmp.json"), done);
+            });
+          });
+          req.on('error', done);
+          req.write(querystring.stringify({
+            settings: JSON.stringify(settingsObj).toString('utf8'),
+          }));
+          req.end();
+        });
+      });
+    });
+  });
+});
+
+var own = {}.hasOwnProperty;
+function extend(obj, src){
+  for (var key in src) {
+    if (own.call(src, key)) obj[key] = src[key];
+  }
+  return obj;
+}

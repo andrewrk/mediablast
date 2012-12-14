@@ -1,0 +1,20 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Settings - Media Man</title>
+  </head>
+  <body>
+    <form action="/admin/settings" method="post">
+      <textarea name="settings"><%= settings %></textarea>
+      <br>
+      <input type="submit">
+      <% if (saved) { %>
+        <p>Saved.</p>
+      <% } %>
+      <% if (error) { %>
+        <p>Error saving settings: <%= error %>.</p>
+      <% } %>
+    </form>
+  </body>
+</html>
+

@@ -1,0 +1,32 @@
+<!doctype html>
+<html ng-app="main">
+  <head>
+    <title>Status - Media Man</title>
+    <style type="text/css">
+      .capsize {
+        max-width: 300px;
+        max-height: 100px;
+      }
+      table {
+        border-collapse: collapse;
+      }
+      td, th {
+        border: 1px solid gray;
+        padding: 4px;
+      }
+      td.queued {
+        background-color: #e4e4e4;
+      }
+    </style>
+  </head>
+  <body ng-controller="MainCtrl">
+    <div>{{status}}</div>
+    <h2>Jobs</h2>
+    <h3>Processing</h3>
+    <div job-table="processing"></div>
+    <h3>Complete</h3>
+    <div job-table="complete"></div>
+    <script src="/vendor/angular-1.0.1.min.js"></script>
+    <script src="/js/status.js"></script>
+  </body>
+</html>

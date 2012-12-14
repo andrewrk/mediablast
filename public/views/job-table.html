@@ -1,0 +1,31 @@
+<table ng-show="state_jobs.length">
+  <tr>
+    <th style="width: 50px">id</th>
+    <th style="width: 50px" ng-show="state == 'processing'">progress</th>
+    <th style="width: 50px">duration</th>
+    <th style="width: 75px">error</th>
+    <th colspan="999">steps</th>
+  </tr>
+  <tr ng-repeat="job in state_jobs">
+    <td>{{job.id}}</td>
+    <td ng-show="state == 'processing'">{{job.progress|percent}}</td>
+    <td>{{jobDuration(job)}}</td>
+    <td><abbr title="{{job.message}}">{{job.error}}</abbr></td>
+    <td ng-repeat="(name, results) in job.info" style="width: 100px" class="{{results.state}}">
+      {{name}}<br>
+      {{results.task}}<br>
+      {{progress(results)|percent}}<br>
+      <div ng-show="results.task == 'transcode'">
+        src: {{results.src.format}},
+        {{results.src.bitRate}}/s,
+        {{results.src.duration|duration}}
+        <br>
+        dest: {{results.dest.format}},
+        {{results.dest.bitRate}}/s
+        {{results.dest.duration|duration}}
+      </div>
+      <a ng-show="results.task == 'callback'" href="https://s3.amazonaws.com/{{results.url}}">url</a>
+      <a ng-show="results.task == 'store' || results.task == 'retrieve'" href="https://s3.amazonaws.com/{{results.bucket}}{{results.url}}">url</a>
+    </td>
+  </tr>
+</table>
