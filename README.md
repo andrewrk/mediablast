@@ -5,17 +5,16 @@ WORK IN PROGRESS. NOT READY FOR USE.
 
 ## Quick Start
 
+See a [working example of a mediablast server](https://gist.github.com/4312843)
+
 ### Server Code
 
 ```js
+var http = require('http');
 var mediablast = require('mediablast');
-var app = mediablast.create({
-  redis: {
-    host: 'localhost',
-    port: 6379,
-    db: 0,
-    password: null
-  }
+
+var app = mediablast({
+  settingsFile: 'settings.json'
 });
 
 app.registerTask('s3.store', require('node-plan-s3-upload'));
@@ -24,17 +23,15 @@ app.registerTask('audio.waveform', require('node-plan-waveform'));
 app.registerTask('audio.transcode', require('node-plan-transcode'));
 app.registerTask('meta.callback', require('node-plan-callback'));
 
-var http = require('http');
-
-http.createServer(app);
-http.listen(function() {
+var server = http.createServer(app);
+server.listen(function() {
   console.log("mediablast server online");
 });
 ```
 
 ### HTTP Client Usage
 
-#### Managing User Accounts
+#### Admin
 
 Currently mediablast only supports one user. By default this user name is `admin`
 and the password is `3pTkHwHV`. You should change this before you deploy.
@@ -172,10 +169,3 @@ The response will look like:
 ### Admin Interface
 
 Hit `/admin` with your browser to monitor all jobs in the system.
-
-## Documentation
-
-### Installation
-
- 1. Get a redis server version 2.6.x up and running somewhere.
- 2. `npm install mediablast`
