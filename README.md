@@ -1,8 +1,6 @@
 # mediablast
 Generic processing server built on [node-plan](https://github.com/superjoe30/node-plan).
 
-WORK IN PROGRESS. NOT READY FOR USE.
-
 ## Quick Start
 
 See a [working example of a mediablast server](https://gist.github.com/4312843)
