@@ -13,6 +13,14 @@ var app = mediablast({
   settingsFile: path.join(__dirname, "settings.json")
 });
 
+// so that we can test the admin interface
+app.registerTask('audio.transcode', require('plan-transcode'));
+app.registerTask('audio.waveform', require('plan-waveform'));
+app.registerTask('image.thumbnail', require('plan-thumbnail'));
+app.registerTask('s3.upload', require('plan-s3-upload'));
+app.registerTask('s3.download', require('plan-s3-download'));
+app.registerTask('meta.callback', require('plan-callback'));
+
 var server = http.createServer(app);
 server.listen(env.PORT, env.HOST, function() {
   console.log("Listening at http://" + env.HOST + ":" + env.PORT);
