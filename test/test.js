@@ -1,5 +1,4 @@
-var mediaMan = require('../lib/app')
-  , Settings = require('../lib/settings')
+var mediablast = require('../lib/app')
   , spawn = require('child_process').spawn
   , path = require('path')
   , Batch = require('batch')
@@ -28,10 +27,11 @@ describe("bootup", function() {
     batch.push(function(done) { fs.unlink("naught.log", done); });
     batch.push(function(done) { fs.unlink("stderr.log", done); });
     batch.push(function(done) { fs.unlink("stdout.log", done); });
+    batch.push(function(done) { fs.unlink("test/settings.json", done); });
     batch.end(done);
   });
   it("boots", function(done) {
-    var exe = spawn("./node_modules/.bin/naught", ["start", "lib/server.js"], {
+    var exe = spawn("./node_modules/.bin/naught", ["start", path.join(__dirname, "server.js")], {
       stdio: 'pipe'
     });
     var stderr = "";
@@ -49,7 +49,7 @@ describe("bootup", function() {
     });
   });
   it("responds to status endpoint", function(done) {
-    http.get(url.parse("http://localhost:13116/status"), function(resp) {
+    http.get(url.parse("http://localhost:14007/status"), function(resp) {
       assert.strictEqual(resp.statusCode, 200);
       done();
     });
@@ -103,12 +103,22 @@ describe("app", function() {
         "password": "3pTkHwHV"
       }
     };
-    var settings = new Settings(path.join(__dirname, "tmp.json"));
-    settings.json = extend(defaultSettings, settingsObject);
-    var app = mediaMan.create(settings);
-    var server = http.createServer(app);
-    server.listen(cb);
-    server.app = app;
+    extend(defaultSettings, settingsObject);
+    var settingsFile = path.join(__dirname, "tmp.json");
+    var server = http.createServer();
+    fs.writeFile(settingsFile, JSON.stringify(defaultSettings), function(err) {
+      if (err) return cb(err)
+      var app = mediablast({settingsFile: settingsFile});
+      app.registerTask('audio.transcode', require('plan-transcode'));
+      app.registerTask('audio.waveform', require('plan-waveform'));
+      app.registerTask('image.thumbnail', require('plan-thumbnail'));
+      app.registerTask('s3.upload', require('plan-s3-upload'));
+      app.registerTask('s3.download', require('plan-s3-download'));
+      app.registerTask('meta.callback', require('plan-callback'));
+      server.on('request', app);
+      server.app = app;
+      server.listen(cb);
+    });
     return server;
   }
   it("executes a complicated audio template", function(done) {
@@ -198,7 +208,7 @@ describe("app", function() {
         "secret": env.S3_SECRET,
         "bucket": env.S3_BUCKET,
       });
-      var uploader = client.upload(path.join(__dirname, "48000.wav"), "/media-man-test/48000.wav")
+      var uploader = client.upload(path.join(__dirname, "48000.wav"), "/mediablast-test/48000.wav")
       uploader.on('error', done);
       uploader.on('end', cb);
     });
@@ -210,7 +220,7 @@ describe("app", function() {
       var url = "http://localhost:" + server.address().port + "/";
       var req = superagent.post(url);
       req.field('callbackUrl', "http://localhost:" + cbServer.address().port + "/");
-      req.field('s3Url', "/media-man-test/48000.wav");
+      req.field('s3Url', "/mediablast-test/48000.wav");
       req.field('templateId', "16b924a9-89d0-41ce-b452-93478b5e60fc");
       req.buffer();
       req.end(function(err, resp) {
@@ -408,8 +418,8 @@ describe("app", function() {
           });
           resp.on('end', function() {
             assert.ok(/Unauthorized/.test(body));
+            done()
           });
-          done()
         });
         req.on('error', done);
         req.end()
@@ -422,7 +432,7 @@ describe("app", function() {
           port: server.address().port,
           method: 'GET',
           path: '/admin/settings',
-          auth: 'admin:eQCDUs3j',
+          auth: 'admin:3pTkHwHV',
         };
         var req = http.request(opts, function (resp) {
           resp.setEncoding('utf8');
@@ -434,8 +444,8 @@ describe("app", function() {
             assert.ok(/submit/.test(body));
             assert.ok(/textarea/.test(body));
             assert.ok(/&quot;username&quot;:/.test(body));
+            done()
           });
-          done()
         });
         req.on('error', done);
         req.end()
@@ -443,7 +453,7 @@ describe("app", function() {
     });
     it("accepts an update to settings", function(done) {
       var server = createServer(null, function() {
-        fs.readFile("settings.json", 'utf8', function(err, settingsJson) {
+        fs.readFile(path.join(__dirname, "tmp.json"), 'utf8', function(err, settingsJson) {
           if (err) return done(err);
           var settingsObj = JSON.parse(settingsJson);
           var opts = {
@@ -451,7 +461,7 @@ describe("app", function() {
             port: server.address().port,
             method: 'POST',
             path: '/admin/settings',
-            auth: "admin:eQCDUs3j",
+            auth: 'admin:3pTkHwHV',
             headers: {
               'Content-Type': 'application/x-www-form-urlencoded',
             }

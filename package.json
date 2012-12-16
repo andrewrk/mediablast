@@ -4,7 +4,7 @@
   "description": "generic processing server",
   "main": "lib/app.js",
   "scripts": {
-    "test": "mocha --reporter spec"
+    "test": "mocha --reporter spec --timeout 4000"
   },
   "repository": "git://github.com/superjoe30/mediablast.git",
   "keywords": [
@@ -33,9 +33,10 @@
     "plan-s3-download": "~0.1.0",
     "plan-s3-upload": "~0.1.4",
     "mocha": "~1.7.4",
-    "eventsource": "0.0.5",
-    "s3": "0.0.4",
+    "eventsource": "~0.0.5",
+    "s3": "~0.0.4",
     "superagent": "~0.10.0",
-    "plan-thumbnail": "~0.1.0"
+    "plan-thumbnail": "~0.1.0",
+    "naught": "~0.4.1"
   }
 }
