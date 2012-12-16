@@ -1,6 +1,6 @@
 {
   "name": "mediablast",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "generic processing server",
   "main": "lib/app.js",
   "scripts": {
