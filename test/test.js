@@ -96,7 +96,7 @@ describe("app", function() {
     settingsObject = settingsObject || {};
     var defaultSettings = {
       "version": 12,
-      "completed_job_lifespan": 1800,
+      "completedJobLifespan": 1800,
       "templates": {},
       "auth": {
         "username": "admin",
@@ -115,9 +115,11 @@ describe("app", function() {
       app.registerTask('s3.upload', require('plan-s3-upload'));
       app.registerTask('s3.download', require('plan-s3-download'));
       app.registerTask('meta.callback', require('plan-callback'));
-      server.on('request', app);
-      server.app = app;
-      server.listen(cb);
+      app.once('settingsLoad', function() {
+        server.on('request', app);
+        server.app = app;
+        server.listen(cb);
+      });
     });
     return server;
   }
@@ -357,7 +359,7 @@ describe("app", function() {
   });
   it("removes jobs from memory after a period of time", function(done) {
     var server = createServer({
-      "completed_job_lifespan": 0.1,
+      "completedJobLifespan": 0.1,
       "templates": {
         "16b924a9-89d0-41ce-b452-93478b5e60fc": {
           "tasks": {

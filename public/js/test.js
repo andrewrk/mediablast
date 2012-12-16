@@ -1,36 +1,5 @@
 (function(){
-  var onProgress, onResponse, onSuccess;
-  onProgress = function(event){
-    var percent_complete;
-    if (event.lengthComputable) {
-      percent_complete = Math.round(event.loaded / event.total * 100);
-      console.log("percent", percent_complete);
-    }
-  };
-  onResponse = function(resp){
-    var source, onMessage, onError;
-    source = new EventSource("/status/" + resp.id);
-    $('#status2').text("event source connecting");
-    onMessage = function(e){
-      var obj;
-      $('#status2').text("event source open");
-      $('#status').text(e.data);
-      obj = JSON.parse(e.data);
-      if (obj.state === 'complete') {
-        $('#status2').text("event source closed");
-        source.close();
-      }
-    };
-    onError = function(e){
-      $('#status2').text("event source error");
-    };
-    source.addEventListener('message', onMessage, false);
-    source.addEventListener('error', onError, false);
-  };
-  onSuccess = function(event){
-    return onResponse(JSON.parse(event.target.responseText));
-  };
-  $('#template').on('change', function(event){
+  $('#file').on('change', function(event){
     var xhr, fd;
     xhr = new XMLHttpRequest();
     xhr.upload.addEventListener('progress', onProgress, false);
@@ -58,4 +27,36 @@
       $.ajax(opts).done(onResponse);
     }
   });
+
+  function onProgress(event) {
+    var percentComplete;
+    if (event.lengthComputable) {
+      percentComplete = Math.round(event.loaded / event.total * 100);
+      console.log("percent", percentComplete);
+    }
+  }
+
+  function onResponse(resp) {
+    var source = new EventSource("/status/" + resp.id);
+    $('#connection-status').text("event source connecting");
+    source.addEventListener('message', onMessage, false);
+    source.addEventListener('error', onError, false);
+    function onMessage(e) {
+      var obj;
+      $('#connection-status').text("event source open");
+      $('#job-status').text(e.data);
+      obj = JSON.parse(e.data);
+      if (obj.state === 'complete') {
+        $('#connection-status').text("event source closed");
+        source.close();
+      }
+    }
+    function onError(e) {
+      $('#connection-status').text("event source error");
+    }
+  }
+
+  function onSuccess(event) {
+    return onResponse(JSON.parse(event.target.responseText));
+  }
 }).call(this);

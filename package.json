@@ -4,7 +4,7 @@
   "description": "generic processing server",
   "main": "lib/app.js",
   "scripts": {
-    "test": "mocha --reporter spec --timeout 4000",
+    "test": "mocha --reporter spec --timeout 6000",
     "test-server": "node-dev test/server.js"
   },
   "repository": "git://github.com/superjoe30/mediablast.git",

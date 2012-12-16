@@ -1,4 +1,4 @@
-<table ng-show="state_jobs.length">
+<table ng-show="stateJobs.length">
   <tr>
     <th style="width: 50px">id</th>
     <th style="width: 50px" ng-show="state == 'processing'">progress</th>
@@ -6,7 +6,7 @@
     <th style="width: 75px">error</th>
     <th colspan="999">steps</th>
   </tr>
-  <tr ng-repeat="job in state_jobs">
+  <tr ng-repeat="job in stateJobs">
     <td>{{job.id}}</td>
     <td ng-show="state == 'processing'">{{job.progress|percent}}</td>
     <td>{{jobDuration(job)}}</td>

@@ -22,10 +22,23 @@ app.registerTask('s3.download', require('plan-s3-download'));
 app.registerTask('meta.callback', require('plan-callback'));
 
 var server = http.createServer(app);
+var listening = false;
 server.listen(env.PORT, env.HOST, function() {
   console.log("Listening at http://" + env.HOST + ":" + env.PORT);
-  if (process.send) process.send('online');
+  listening = true;
+  checkOnline();
 });
+var settingsLoaded = false;
+app.once('settingsLoad', function() {
+  settingsLoaded = true;
+  checkOnline();
+});
+
+function checkOnline() {
+  if (settingsLoaded && listening) {
+    if (process.send) process.send('online');
+  }
+}
 
 installShutdownHook();
 
