@@ -39,7 +39,7 @@ http.listen(function() {
 Currently mediablast only supports one user. By default this user name is `admin`
 and the password is `3pTkHwHV`. You should change this before you deploy.
 
-For better user account management, see #1.
+For better user account management, see [#1](https://github.com/superjoe30/mediablast/issues/1).
 
 #### Managing Processing Templates
 
