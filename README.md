@@ -31,98 +31,12 @@ server.listen(function() {
 
 #### Admin
 
-Currently mediablast only supports one user. By default this user name is `admin`
-and the password is `3pTkHwHV`. You should change this before you deploy.
+Currently mediablast only supports one user. By default this user name is
+`admin` and the password is `3pTkHwHV`. You should change this before you
+deploy.
 
-For better user account management, see [#1](https://github.com/superjoe30/mediablast/issues/1).
-
-#### Managing Processing Templates
-
-##### Creating
-
-A template is a specification of what will be done with the user input.
-
-You can create a template by making POST request to `/admin/templates/create`
-with HTTP basic auth and a JSON payload:
-
-```json
-{
-  "options": {
-    "task-1": {
-      // task-1 options that apply to every instance of task-1 below.
-      // this is a convenience that can be overridden by the task
-      // instance options.
-      "a": 1,
-      "b": 2
-    }
-  },
-  "tasks": {
-    "example-1": {
-      "task": "task-1",
-      "options": {
-        // these options override the global options above
-        "a": 3
-      }
-    },
-    "example-2": {
-      "task": "task-2",
-      "dependencies": [ "example-1" ]
-    }
-  }
-}
-```
-
-A successful response looks like:
-
-```json
-{
-  "success": true,
-  "template": {
-    "id": "6373af69-367e-48f4-8734-f30cee4f7541",
-    "options": {
-      "task-1": {
-        "a": 1,
-        "b": 2
-      }
-    },
-    "tasks": {
-      "example-1": {
-        "task": "task-1",
-        "options": {
-          "a": 3
-        }
-      },
-      "example-2": {
-        "task": "task-2",
-        "dependencies": [ "example-1" ]
-      }
-    }
-  }
-}
-```
-
-An error response looks like:
-
-```json
-{
-  "success": false,
-  "error": "InvalidInput"
-}
-```
-
-##### Deleting
-
-To delete a template, make a POST request to `/admin/templates/delete` with
-HTTP basic auth.
-
-```
-POST /admin/templates/delete
-Content-Type: application/json
-
-{
-  "templateId": "6373af69-367e-48f4-8734-f30cee4f7541"
-}
-```
+For better user account management, see
+[#1](https://github.com/superjoe30/mediablast/issues/1).
 
 #### Submitting a Job
 
@@ -163,7 +77,35 @@ The response will look like:
 }
 ```
 
+Once you have the job id, you can use either the push notification status
+endpoint or the polling endpoint.
+
+#### Push Notification Status Endpoint
+
+`GET /status/:jobId` is an EventSource URL which provides push notifications
+for job status and progress updates. Each message is a JSON encoding of the
+job. Once the job state is `complete`, no more events will be sent and the
+client should close the EventSource.
+
+#### Polling Status Endpoint
+
+`GET /poll/:jobId` returns a pure JSON response instead of Server Sent Events.
+
+#### Ping Endpoint
+
+`GET /status` will always return `{"success": true}`. You may use this endpoint
+to determine whether the server is online and responding to requests.
 
 ### Admin Interface
 
-Hit `/admin` with your browser to monitor all jobs in the system.
+#### Monitoring Jobs
+
+Hit `/admin/status` with your browser to monitor all jobs in the system.
+
+#### Editing Settings and Templates
+
+Hit `/admin/settings` with your browser to edit settings and templates.
+
+#### Testing a Template
+
+Hit `/admin/test` with your browser to test a template.
