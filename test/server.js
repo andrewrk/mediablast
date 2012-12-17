@@ -7,7 +7,7 @@ var env = {
   HOST: process.env.HOST || '0.0.0.0',
   PORT: parseInt(process.env.PORT || '14007', 10),
 };
-console.log("Using environment:", env);
+console.info("Using environment:", env);
 
 var app = mediablast({
   settingsFile: path.join(__dirname, "settings.json")
@@ -24,7 +24,7 @@ app.registerTask('meta.callback', require('plan-callback'));
 var server = http.createServer(app);
 var listening = false;
 server.listen(env.PORT, env.HOST, function() {
-  console.log("Listening at http://" + env.HOST + ":" + env.PORT);
+  console.info("Listening at http://" + env.HOST + ":" + env.PORT);
   listening = true;
   checkOnline();
 });
