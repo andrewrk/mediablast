@@ -17,6 +17,8 @@ var env = {
   S3_BUCKET: process.env.S3_BUCKET,
 };
 
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+
 describe("bootup", function() {
   before(function(done) {
     var exe = spawn("./node_modules/.bin/naught", ["stop"]);

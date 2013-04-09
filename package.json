@@ -4,7 +4,7 @@
   "description": "generic processing server",
   "main": "lib/app.js",
   "scripts": {
-    "test": "mocha --reporter spec --timeout 6000",
+    "test": "mocha --reporter spec --timeout 6000 test/test.js",
     "test-server": "node-dev test/server.js"
   },
   "repository": "git://github.com/superjoe30/mediablast.git",
@@ -14,30 +14,30 @@
     "processing",
     "server"
   ],
-  "author": "Andrew Kelley",
+  "author": "Andrew Kelley <superjoe30@gmail.com>",
   "license": "MIT",
   "dependencies": {
     "connect-xcors": "~0.5.2",
-    "connect-sse": "~1.0.1",
-    "batch": "~0.2.1",
+    "connect-sse": "~1.0.5",
+    "batch": "~0.3.2",
     "ejs": "~0.8.3",
-    "temp": "~0.4.0",
+    "temp": "~0.5.0",
     "node-uuid": "~1.4.0",
-    "express": "~3.0.3",
-    "plan": "~0.1.2"
+    "express": "~3.1.1",
+    "plan": "~0.1.4"
   },
   "devDependencies": {
-    "plan-callback": "~0.0.1",
-    "plan-transcode": "~0.0.2",
-    "plan-waveform": "~0.0.4",
-    "plan-s3-download": "~0.1.1",
-    "plan-s3-upload": "~0.1.5",
-    "mocha": "~1.7.4",
-    "eventsource": "~0.0.5",
-    "s3": "0.0.5",
-    "superagent": "~0.10.0",
-    "plan-thumbnail": "~0.1.0",
-    "naught": "~0.4.1",
-    "node-dev": "~0.2.9"
+    "plan-callback": "~0.1.0",
+    "plan-transcode": "~0.1.0",
+    "plan-waveform": "0.0.5",
+    "plan-s3-download": "~0.1.2",
+    "plan-s3-upload": "~0.1.6",
+    "mocha": "~1.9.0",
+    "eventsource": "0.0.6",
+    "s3": "~0.1.0",
+    "superagent": "~0.14.0",
+    "plan-thumbnail": "~0.1.1",
+    "naught": "~0.4.3",
+    "node-dev": "~2.0.1"
   }
 }
