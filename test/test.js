@@ -330,6 +330,8 @@ describe("app", function() {
         if (err) return done(err);
         assert.equal(resp.body.error, null);
         assert.strictEqual(resp.body.state, 'processing');
+        assert.strictEqual(resp.body.originalFileName, 'calvin-chess.png');
+        assert.strictEqual(resp.body.originalFileSize, 126245);
         var progress = resp.body.progress;
         assert.strictEqual(progress, 0);
 
