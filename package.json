@@ -24,7 +24,7 @@
     "temp": "~0.5.0",
     "node-uuid": "~1.4.0",
     "express": "~3.1.1",
-    "plan": "~0.1.4",
+    "plan": "~0.1.5",
     "connect-multiparty": "~0.1.0"
   },
   "devDependencies": {
