@@ -25,7 +25,7 @@
     "node-uuid": "~1.4.0",
     "express": "~3.1.1",
     "plan": "~0.1.5",
-    "connect-multiparty": "~0.1.0"
+    "connect-multiparty": "~0.1.1"
   },
   "devDependencies": {
     "plan-callback": "~0.1.0",
