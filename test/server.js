@@ -11,6 +11,10 @@ console.info("Using environment:", env);
 
 var app = mediablast({
   settingsFile: path.join(__dirname, "settings.json")
+  //redis: {
+  //  host: "localhost",
+  //  port: 6379
+  //},
 });
 
 // so that we can test the admin interface
