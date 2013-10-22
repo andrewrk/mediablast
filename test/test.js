@@ -125,8 +125,10 @@ describe("app", function() {
         next({
           sweepInterval: 1000,
           redis: {
-            host: 'localhost',
-            port: 6379,
+              event: {
+              host: 'localhost',
+              port: 6379,
+            },
           },
         });
       });
